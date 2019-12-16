@@ -100,7 +100,7 @@ fn _set_volume(
 }
 
 fn get_commands_file_path(video_uri: &str) -> String {
-    let path = Path::new(video_uri).with_extension("json");
+    let path = Path::new(video_uri).with_extension("yml");
     let prefix = "file:///";
     path.to_str().unwrap()[prefix.len()..].to_string()
 }
@@ -119,7 +119,7 @@ fn read_commands(path: &str) -> Vec<Action> {
     };
     let mut data = String::new();
     file.read_to_string(&mut data).expect("unable to read file");
-    let actions: Vec<Action> = serde_json::from_str(&data).unwrap();
+    let actions: Vec<Action> = serde_yaml::from_str(&data).unwrap();
     actions
 }
 
