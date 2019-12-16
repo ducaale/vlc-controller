@@ -6,6 +6,8 @@ use std::time::Duration;
 use std::io;
 use std::io::prelude::*;
 use std::fmt;
+use std::fs::File;
+use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 struct Status {
@@ -21,6 +23,14 @@ struct Meta {
 struct Credentials<'a> {
     user: &'a str,
     password: &'a str
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "action", rename_all = "snake_case")]
+enum Action {
+    Skip { start: u32, end: u32 },
+    Mute { start: u32, end: u32 },
+    SetVolume { amount: u32, at: u32 }
 }
 
 struct Time(u32);
@@ -41,8 +51,8 @@ fn get_meta(client: &reqwest::Client, credentials: &Credentials) -> Result<Meta,
     let uri = &data["children"][0]["children"][0]["uri"];
     let duration = &data["children"][0]["children"][0]["duration"];
     let meta = Meta {
-        name: Value::to_string(&name),
-        uri: Value::to_string(&uri),
+        name: Value::as_str(&name).unwrap().to_string(),
+        uri: Value::as_str(&uri).unwrap().to_string(),
         duration: Value::as_u64(&duration).unwrap() as u32
     };
     Ok(meta)
@@ -89,19 +99,45 @@ fn _set_volume(
     Ok(())
 }
 
-fn control_vlc(client: &reqwest::Client, credentials: &Credentials) -> Result<(), Error> {
-    // TODO: read skip_times from files in a function and implement memo so we
-    // don't read the same file again and again
-    let skip_times = vec![(10, 15), (20, 25), (40, 45)];
+fn get_commands_file_path(video_uri: &str) -> String {
+    let path = Path::new(video_uri).with_extension("json");
+    let prefix = "file:///";
+    path.to_str().unwrap()[prefix.len()..].to_string()
+}
 
+// TODO: implement memoization so we don't read the same file again and again
+fn read_commands(path: &str) -> Vec<Action> {
+    let mut file = match File::open(path) {
+        Ok(file) => file,
+        Err(e) => match e.kind() {
+            io::ErrorKind::NotFound => {
+                println!("\n[err] Commands File not found");
+                return vec![];
+            },
+            _ => panic!("{}", e)
+        }
+    };
+    let mut data = String::new();
+    file.read_to_string(&mut data).expect("unable to read file");
+    let actions: Vec<Action> = serde_json::from_str(&data).unwrap();
+    actions
+}
+
+fn control_vlc(client: &reqwest::Client, credentials: &Credentials) -> Result<(), Error> {
     let meta = get_meta(&client, &credentials)?;
     let status = get_status(&client, &credentials)?;
     print!("\r[info] Currently playing: {} ({} / {})", meta.name, Time(status.time), Time(meta.duration));
     io::stdout().flush().unwrap();
 
-    for &(skip_start, skip_end) in skip_times.iter() {
-        if status.time >= skip_start && status.time < skip_end {
-            seek_to(&client, &credentials, skip_end)?;
+    let actions = read_commands(&get_commands_file_path(&meta.uri));
+    for action in actions.iter() {
+        match *action {
+            Action::Skip { start, end } => {
+                if status.time >= start && status.time < end {
+                    seek_to(&client, &credentials, end)?;
+                }
+            },
+            _ => {}
         }
     }
 
