@@ -5,19 +5,22 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::io;
 use std::io::prelude::*;
-use std::fmt;
 use std::fs::File;
 use std::path::Path;
 
+mod time;
+use time::Time;
+
 #[derive(Deserialize, Debug)]
 struct Status {
-    time: u32
+    #[serde(with = "time")]
+    time: Time
 }
 
 struct Meta {
     name: String,
     uri: String,
-    duration: u32
+    duration: Time
 }
 
 struct Credentials<'a> {
@@ -28,15 +31,22 @@ struct Credentials<'a> {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "action", rename_all = "snake_case")]
 enum Action {
-    Skip { start: u32, end: u32 },
-    Mute { start: u32, end: u32 },
-    SetVolume { amount: u32, at: u32 }
-}
-
-struct Time(u32);
-impl fmt::Display for Time {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:02}:{:02}", self.0 / 60, self.0 % 60)
+    Skip {
+        #[serde(with = "time")]
+        start: Time,
+        #[serde(with = "time")]
+        end: Time
+    },
+    Mute {
+        #[serde(with = "time")]
+        start: Time,
+        #[serde(with = "time")]
+        end: Time
+    },
+    SetVolume {
+        amount: u32,
+        #[serde(with = "time")]
+        at: Time
     }
 }
 
@@ -53,7 +63,7 @@ fn get_meta(client: &reqwest::Client, credentials: &Credentials) -> Result<Meta,
     let meta = Meta {
         name: Value::as_str(&name).unwrap().to_string(),
         uri: Value::as_str(&uri).unwrap().to_string(),
-        duration: Value::as_u64(&duration).unwrap() as u32
+        duration: Time::from(Value::as_u64(&duration).unwrap() as u32)
     };
     Ok(meta)
 }
@@ -74,7 +84,7 @@ fn get_status(
 fn seek_to(
     client: &reqwest::Client,
     credentials: &Credentials,
-    position: u32
+    position: Time
 ) -> Result<(), Error> {
     client
         .get("http://localhost:8080/requests/status.json")
@@ -88,11 +98,11 @@ fn seek_to(
 fn _set_volume(
     client: &reqwest::Client,
     credentials: &Credentials,
-    level: u32
+    amount: u32
 ) -> Result<(), Error> {
     client
         .get("http://localhost:8080/requests/status.json")
-        .query(&[("command", "volume"), ("val", &level.to_string())])
+        .query(&[("command", "volume"), ("val", &amount.to_string())])
         .basic_auth(credentials.user, Some(credentials.password))
         .send()?;
 
@@ -126,7 +136,12 @@ fn read_commands(path: &str) -> Vec<Action> {
 fn control_vlc(client: &reqwest::Client, credentials: &Credentials) -> Result<(), Error> {
     let meta = get_meta(&client, &credentials)?;
     let status = get_status(&client, &credentials)?;
-    print!("\r[info] Currently playing: {} ({} / {})", meta.name, Time(status.time), Time(meta.duration));
+    print!(
+        "\r[info] Currently playing: '{}' ({} / {})",
+        meta.name,
+        status.time,
+        meta.duration
+    );
     io::stdout().flush().unwrap();
 
     let actions = read_commands(&get_commands_file_path(&meta.uri));
@@ -149,8 +164,8 @@ fn main() -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     loop {
         if let Err(e) = control_vlc(&client, &credentials) {
-            if e.status() == None {
-                print!("\n[err] Unable to connect to vlc")
+            if e.is_http() && e.status() == None {
+                println!("[err] Unable to connect to vlc")
             }
             else {
                 return Err(e);
