@@ -13,7 +13,6 @@ use time::Time;
 
 #[derive(Deserialize, Debug)]
 struct Status {
-    #[serde(with = "time")]
     time: Time
 }
 
@@ -21,8 +20,6 @@ struct Status {
 struct Meta {
     name: String,
     uri: String,
-
-    #[serde(with = "time")]
     duration: Time
 }
 
@@ -34,23 +31,9 @@ struct Credentials<'a> {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "action", rename_all = "snake_case")]
 enum Action {
-    Skip {
-        #[serde(with = "time")]
-        start: Time,
-        #[serde(with = "time")]
-        end: Time
-    },
-    Mute {
-        #[serde(with = "time")]
-        start: Time,
-        #[serde(with = "time")]
-        end: Time
-    },
-    SetVolume {
-        amount: u32,
-        #[serde(with = "time")]
-        at: Time
-    }
+    Skip { start: Time, end: Time },
+    Mute { start: Time, end: Time },
+    SetVolume { amount: u32, at: Time }
 }
 
 fn get_meta(client: &reqwest::Client, credentials: &Credentials) -> Result<Meta, Error> {

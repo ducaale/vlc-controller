@@ -39,9 +39,9 @@ impl From<u32> for Time {
     }
 }
 
-pub fn deserialize<'de, D>(
-        deserializer: D,
-    ) -> Result<Time, D::Error>
+
+impl<'de> Deserialize<'de> for Time {
+    fn deserialize<D>(deserializer: D) -> Result<Time, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -52,3 +52,4 @@ pub fn deserialize<'de, D>(
             _ => panic!("invalid time format")
         }
     }
+}
