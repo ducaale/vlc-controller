@@ -17,9 +17,12 @@ struct Status {
     time: Time
 }
 
+#[derive(Deserialize, Debug)]
 struct Meta {
     name: String,
     uri: String,
+
+    #[serde(with = "time")]
     duration: Time
 }
 
@@ -57,14 +60,8 @@ fn get_meta(client: &reqwest::Client, credentials: &Credentials) -> Result<Meta,
         .send()?;
 
     let data: Value = serde_json::from_str(&resp.text().unwrap()).unwrap();
-    let name = &data["children"][0]["children"][0]["name"];
-    let uri = &data["children"][0]["children"][0]["uri"];
-    let duration = &data["children"][0]["children"][0]["duration"];
-    let meta = Meta {
-        name: Value::as_str(&name).unwrap().to_string(),
-        uri: Value::as_str(&uri).unwrap().to_string(),
-        duration: Time::from(Value::as_u64(&duration).unwrap() as u32)
-    };
+    let data = data["children"][0]["children"][0].clone();
+    let meta : Meta = serde_json::from_value(data).unwrap();
     Ok(meta)
 }
 
