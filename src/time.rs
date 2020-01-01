@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for Time {
         match v {
             Value::Number(_) => Ok(Time::from(Value::as_u64(&v).unwrap() as u32)),
             Value::String(s) => Ok(Time::from(s.as_str())),
-            _ => panic!("invalid time format")
+            _ => panic!("invalid time format"),
         }
     }
 }

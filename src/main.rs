@@ -1,37 +1,37 @@
 use serde::Deserialize;
-use std::thread::sleep;
-use std::time::Duration;
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::fs::File;
 use std::path::Path;
+use std::thread::sleep;
+use std::time::Duration;
 
+mod printer;
 mod time;
 mod vlc_service;
-mod printer;
 mod volume;
 
-use time::Time;
 use printer::Printer;
+use time::Time;
 use volume::Volume;
 
 #[derive(Deserialize, Debug)]
 pub struct Status {
     time: Time,
     #[serde(with = "volume")]
-    volume: Volume
+    volume: Volume,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Meta {
     name: String,
     uri: String,
-    duration: Time
+    duration: Time,
 }
 
 pub struct Credentials<'a> {
     user: &'a str,
-    password: &'a str
+    password: &'a str,
 }
 
 #[derive(Deserialize, Debug, Clone, Copy)]
@@ -39,7 +39,7 @@ pub struct Credentials<'a> {
 enum Action {
     Skip { start: Time, end: Time },
     Mute { start: Time, end: Time },
-    SetVolume { amount: Volume, at: Time }
+    SetVolume { amount: Volume, at: Time },
 }
 
 struct VLCController<'a> {
@@ -48,7 +48,7 @@ struct VLCController<'a> {
     printer: Printer,
     last_volume: Option<Volume>,
     last_commands_file_uri: Option<String>,
-    last_commands: Vec<Action>
+    last_commands: Vec<Action>,
 }
 
 impl<'a> VLCController<'a> {
@@ -59,7 +59,7 @@ impl<'a> VLCController<'a> {
             printer: Printer::new(),
             last_volume: None,
             last_commands_file_uri: None,
-            last_commands: vec![]
+            last_commands: vec![],
         }
     }
 
@@ -68,9 +68,7 @@ impl<'a> VLCController<'a> {
         let status = vlc_service::get_status(&self.client, &self.credentials)?;
         let progress = format!(
             "[info] Currently playing: '{}' ({} / {})",
-            meta.name,
-            status.time,
-            meta.duration
+            meta.name, status.time, meta.duration
         );
         self.printer.print_sticky_line(&progress);
 
@@ -79,27 +77,35 @@ impl<'a> VLCController<'a> {
             match *action {
                 Action::Skip { start, end } => {
                     if status.time >= start && status.time < end {
-                        self.printer.print_line(&format!("[info] skipping {} seconds", time::difference(end, start)));
+                        self.printer.print_line(&format!(
+                            "[info] skipping {} seconds",
+                            time::difference(end, start)
+                        ));
                         vlc_service::seek_to(&self.client, &self.credentials, end)?;
                     }
-                },
+                }
                 Action::Mute { start, end } => {
                     if status.time == start && self.last_volume == None {
-                        self.printer.print_line(&format!("[info] muting audio for {} seconds", time::difference(end, start)));
+                        self.printer.print_line(&format!(
+                            "[info] muting audio for {} seconds",
+                            time::difference(end, start)
+                        ));
                         vlc_service::set_volume(&self.client, &self.credentials, Volume::new(0))?;
                         self.last_volume = Some(status.volume);
-                    }
-                    else if status.time == end {
+                    } else if status.time == end {
                         if let Some(last_volume) = self.last_volume {
                             self.printer.print_line("[info] unmuting audio");
                             vlc_service::set_volume(&self.client, &self.credentials, last_volume)?;
                             self.last_volume = None;
                         }
                     }
-                },
+                }
                 Action::SetVolume { at, amount } => {
                     if status.time == at && volume::abs_difference(status.volume, amount) > 2 {
-                        self.printer.print_line(&format!("[info] changing volume from {} to {}", status.volume, amount));
+                        self.printer.print_line(&format!(
+                            "[info] changing volume from {} to {}",
+                            status.volume, amount
+                        ));
                         vlc_service::set_volume(&self.client, &self.credentials, amount)?;
                     }
                 }
@@ -111,7 +117,7 @@ impl<'a> VLCController<'a> {
     fn get_commands(&mut self, meta: &Meta) -> Vec<Action> {
         if let Some(last_commands_file_uri) = &self.last_commands_file_uri {
             if meta.uri == *last_commands_file_uri {
-                return self.last_commands.clone()
+                return self.last_commands.clone();
             }
         }
         self.last_commands_file_uri = Some(meta.uri.clone());
@@ -119,18 +125,22 @@ impl<'a> VLCController<'a> {
         let commands_file_path = &self.get_commands_file_path(&meta.uri);
         match self.read_commands(&commands_file_path) {
             Ok(commands) => {
-                self.printer.print_line(&format!("[info] reading commands from '{}'", commands_file_path));
+                self.printer.print_line(&format!(
+                    "[info] reading commands from '{}'",
+                    commands_file_path
+                ));
                 self.last_commands = commands;
                 self.last_commands.clone()
-            },
+            }
             Err(e) => match e.kind() {
                 io::ErrorKind::NotFound => {
-                    self.printer.print_line(&format!("[err] No commands file found for '{}'", meta.name));
+                    self.printer
+                        .print_line(&format!("[err] No commands file found for '{}'", meta.name));
                     self.last_commands = vec![];
                     self.last_commands.clone()
-                },
-                _ => panic!("{}", e)
-            }
+                }
+                _ => panic!("{}", e),
+            },
         }
     }
 
@@ -150,15 +160,17 @@ impl<'a> VLCController<'a> {
 }
 
 fn main() -> Result<(), reqwest::Error> {
-    let credentials = Credentials { user: "", password: "12345" };
+    let credentials = Credentials {
+        user: "",
+        password: "12345",
+    };
     let client = reqwest::Client::new();
     let mut vlc_controller = VLCController::new(client, credentials);
     loop {
         if let Err(e) = vlc_controller.run() {
             if e.is_http() && e.status() == None {
                 println!("[err] Unable to connect to vlc");
-            }
-            else {
+            } else {
                 return Err(e);
             }
         };

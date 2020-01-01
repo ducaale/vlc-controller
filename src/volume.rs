@@ -17,7 +17,7 @@ impl Volume {
     }
 
     pub fn scale(&self, from: u32, to: u32) -> Volume {
-        let amount = (self.0 as f32/ from as f32) * to as f32;
+        let amount = (self.0 as f32 / from as f32) * to as f32;
         Volume(amount as u32)
     }
 }
@@ -35,7 +35,7 @@ where
         Value::Number(_) => {
             let volume = Volume(Value::as_u64(&v).unwrap() as u32);
             Ok(volume.scale(512, 200))
-        },
-        _ => panic!("invalid volume")
+        }
+        _ => panic!("invalid volume"),
     }
 }
