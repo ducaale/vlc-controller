@@ -39,6 +39,9 @@ impl From<u32> for Time {
     }
 }
 
+pub fn difference(time1: Time, time2: Time) -> u32 {
+    time1.0 - time2.0
+}
 
 impl<'de> Deserialize<'de> for Time {
     fn deserialize<D>(deserializer: D) -> Result<Time, D::Error>

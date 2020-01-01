@@ -9,13 +9,17 @@ use std::path::Path;
 mod time;
 mod vlc_service;
 mod printer;
+mod volume;
 
 use time::Time;
 use printer::Printer;
+use volume::Volume;
 
 #[derive(Deserialize, Debug)]
 pub struct Status {
-    time: Time
+    time: Time,
+    #[serde(with = "volume")]
+    volume: Volume
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -35,13 +39,14 @@ pub struct Credentials<'a> {
 enum Action {
     Skip { start: Time, end: Time },
     Mute { start: Time, end: Time },
-    SetVolume { amount: u32, at: Time }
+    SetVolume { amount: Volume, at: Time }
 }
 
 struct VLCController<'a> {
     client: reqwest::Client,
     credentials: Credentials<'a>,
     printer: Printer,
+    last_volume: Option<Volume>,
     last_commands_file_uri: Option<String>,
     last_commands: Vec<Action>
 }
@@ -52,6 +57,7 @@ impl<'a> VLCController<'a> {
             client,
             credentials,
             printer: Printer::new(),
+            last_volume: None,
             last_commands_file_uri: None,
             last_commands: vec![]
         }
@@ -73,15 +79,30 @@ impl<'a> VLCController<'a> {
             match *action {
                 Action::Skip { start, end } => {
                     if status.time >= start && status.time < end {
+                        self.printer.print_line(&format!("[info] skipping {} seconds", time::difference(end, start)));
                         vlc_service::seek_to(&self.client, &self.credentials, end)?;
                     }
                 },
+                Action::Mute { start, end } => {
+                    if status.time == start && self.last_volume == None {
+                        self.printer.print_line(&format!("[info] muting audio for {} seconds", time::difference(end, start)));
+                        vlc_service::set_volume(&self.client, &self.credentials, Volume::new(0))?;
+                        self.last_volume = Some(status.volume);
+                    }
+                    else if status.time == end {
+                        if let Some(last_volume) = self.last_volume {
+                            self.printer.print_line("[info] unmuting audio");
+                            vlc_service::set_volume(&self.client, &self.credentials, last_volume)?;
+                            self.last_volume = None;
+                        }
+                    }
+                },
                 Action::SetVolume { at, amount } => {
-                    if status.time == at {
+                    if status.time == at && volume::abs_difference(status.volume, amount) > 2 {
+                        self.printer.print_line(&format!("[info] changing volume from {} to {}", status.volume, amount));
                         vlc_service::set_volume(&self.client, &self.credentials, amount)?;
                     }
                 }
-                _ => {}
             }
         }
         Ok(())
@@ -95,10 +116,10 @@ impl<'a> VLCController<'a> {
         }
         self.last_commands_file_uri = Some(meta.uri.clone());
 
-        let commads_file_path = &self.get_commands_file_path(&meta.uri);
-        match self.read_commands(&commads_file_path) {
+        let commands_file_path = &self.get_commands_file_path(&meta.uri);
+        match self.read_commands(&commands_file_path) {
             Ok(commands) => {
-                self.printer.print_line(&format!("[info] using commands in '{}'", commads_file_path));
+                self.printer.print_line(&format!("[info] reading commands from '{}'", commands_file_path));
                 self.last_commands = commands;
                 self.last_commands.clone()
             },
@@ -141,6 +162,6 @@ fn main() -> Result<(), reqwest::Error> {
                 return Err(e);
             }
         };
-        sleep(Duration::from_millis(500));
+        sleep(Duration::from_millis(200));
     }
 }

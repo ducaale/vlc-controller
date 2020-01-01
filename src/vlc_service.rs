@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::{Credentials, Meta, Status, Time};
+use crate::{Credentials, Meta, Status, Time, Volume};
 
 pub fn get_meta(client: &reqwest::Client, credentials: &Credentials) -> Result<Meta, reqwest::Error> {
     let mut resp = client
@@ -45,11 +45,11 @@ pub fn seek_to(
 pub fn set_volume(
     client: &reqwest::Client,
     credentials: &Credentials,
-    amount: u32
+    amount: Volume
 ) -> Result<(), reqwest::Error> {
     client
         .get("http://localhost:8080/requests/status.json")
-        .query(&[("command", "volume"), ("val", &amount.to_string())])
+        .query(&[("command", "volume"), ("val", &amount.scale(200, 512).to_string())])
         .basic_auth(credentials.user, Some(credentials.password))
         .send()?;
 
