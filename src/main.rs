@@ -36,7 +36,7 @@ pub struct Credentials<'a> {
 
 #[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(tag = "action", rename_all = "snake_case")]
-enum Action {
+enum Command {
     Skip { start: Time, end: Time },
     Mute { start: Time, end: Time },
     SetVolume { amount: Volume, at: Time },
@@ -48,7 +48,7 @@ struct VLCController<'a> {
     printer: Printer,
     last_volume: Option<Volume>,
     last_commands_file_uri: Option<String>,
-    last_commands: Vec<Action>,
+    last_commands: Vec<Command>,
 }
 
 impl<'a> VLCController<'a> {
@@ -75,7 +75,7 @@ impl<'a> VLCController<'a> {
         let actions = self.get_commands(&meta);
         for action in actions.iter() {
             match *action {
-                Action::Skip { start, end } => {
+                Command::Skip { start, end } => {
                     if status.time >= start && status.time < end {
                         self.printer.print_line(&format!(
                             "[info] skipping {} seconds",
@@ -84,7 +84,7 @@ impl<'a> VLCController<'a> {
                         vlc_service::seek_to(&self.client, &self.credentials, end)?;
                     }
                 }
-                Action::Mute { start, end } => {
+                Command::Mute { start, end } => {
                     if status.time == start && self.last_volume == None {
                         self.printer.print_line(&format!(
                             "[info] muting audio for {} seconds",
@@ -100,10 +100,10 @@ impl<'a> VLCController<'a> {
                         }
                     }
                 }
-                Action::SetVolume { at, amount } => {
+                Command::SetVolume { at, amount } => {
                     if status.time == at && volume::abs_difference(status.volume, amount) > 2 {
                         self.printer.print_line(&format!(
-                            "[info] changing volume from {} to {}",
+                            "[info] changing volume from {}% to {}%",
                             status.volume, amount
                         ));
                         vlc_service::set_volume(&self.client, &self.credentials, amount)?;
@@ -114,7 +114,7 @@ impl<'a> VLCController<'a> {
         Ok(())
     }
 
-    fn get_commands(&mut self, meta: &Meta) -> Vec<Action> {
+    fn get_commands(&mut self, meta: &Meta) -> Vec<Command> {
         if let Some(last_commands_file_uri) = &self.last_commands_file_uri {
             if meta.uri == *last_commands_file_uri {
                 return self.last_commands.clone();
@@ -150,11 +150,11 @@ impl<'a> VLCController<'a> {
         path.to_str().unwrap()[prefix.len()..].to_string()
     }
 
-    fn read_commands(&self, path: &str) -> io::Result<Vec<Action>> {
+    fn read_commands(&self, path: &str) -> io::Result<Vec<Command>> {
         let mut file = File::open(path)?;
         let mut data = String::new();
         file.read_to_string(&mut data)?;
-        let actions: Vec<Action> = serde_yaml::from_str(&data).unwrap();
+        let actions: Vec<Command> = serde_yaml::from_str(&data).unwrap();
         Ok(actions)
     }
 }
