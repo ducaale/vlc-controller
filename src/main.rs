@@ -75,7 +75,7 @@ fn seek_to(
     Ok(())
 }
 
-fn _set_volume(
+fn set_volume(
     client: &reqwest::Client,
     credentials: &Credentials,
     amount: u32
@@ -132,6 +132,11 @@ fn control_vlc(client: &reqwest::Client, credentials: &Credentials) -> Result<()
                     seek_to(&client, &credentials, end)?;
                 }
             },
+            Action::SetVolume { at, amount } => {
+                if status.time == at {
+                    set_volume(&client, &credentials, amount)?;
+                }
+            }
             _ => {}
         }
     }
