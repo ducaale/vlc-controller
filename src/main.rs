@@ -52,9 +52,9 @@ struct VLCController<'a> {
 }
 
 impl<'a> VLCController<'a> {
-    fn new(client: reqwest::Client, credentials: Credentials<'a>) -> VLCController<'a> {
+    fn new(credentials: Credentials) -> VLCController {
         VLCController {
-            client,
+            client: reqwest::Client::new(),
             credentials,
             printer: Printer::new(),
             last_volume: None,
@@ -171,8 +171,7 @@ fn main() -> Result<(), reqwest::Error> {
         user: "",
         password: "12345",
     };
-    let client = reqwest::Client::new();
-    let mut vlc_controller = VLCController::new(client, credentials);
+    let mut vlc_controller = VLCController::new(credentials);
     loop {
         if let Err(e) = vlc_controller.run() {
             if e.is_http() && e.status() == None {
