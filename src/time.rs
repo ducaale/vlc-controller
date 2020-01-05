@@ -1,5 +1,6 @@
+use regex::Regex;
+use serde::de::{self, Visitor};
 use serde::{self, Deserialize, Deserializer};
-use serde_json::Value;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -21,18 +22,6 @@ impl fmt::Display for Time {
     }
 }
 
-impl From<&str> for Time {
-    fn from(value: &str) -> Self {
-        let parts = value.split(':');
-        let mut time = 0;
-        for (i, p) in parts.rev().enumerate() {
-            let p = p.parse::<u32>().expect("cannot serialize time");
-            time += p * (60u32.pow(i as u32));
-        }
-        Time(time)
-    }
-}
-
 impl From<u32> for Time {
     fn from(value: u32) -> Self {
         Time(value)
@@ -43,16 +32,48 @@ pub fn difference(time1: Time, time2: Time) -> u32 {
     time1.0 - time2.0
 }
 
+struct TimeVisitor;
+
+impl<'de> Visitor<'de> for TimeVisitor {
+    type Value = Time;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("time in the format of [h:][m:]s or an integer of seconds")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Time::from(value as u32))
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        let re = Regex::new(r"^(\d+:){0,2}\d+$").unwrap();
+        if !re.is_match(value) {
+            return Err(E::custom(format!(
+                "invalid time format: {}, expected time to be in the format [h:][m:]s",
+                value
+            )));
+        }
+
+        let parts = value.split(':');
+        let mut time = 0;
+        for (i, p) in parts.rev().enumerate() {
+            let p = p.parse::<u32>().unwrap();
+            time += p * (60u32.pow(i as u32));
+        }
+        Ok(Time(time))
+    }
+}
+
 impl<'de> Deserialize<'de> for Time {
     fn deserialize<D>(deserializer: D) -> Result<Time, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let v: Value = Deserialize::deserialize(deserializer)?;
-        match v {
-            Value::Number(_) => Ok(Time::from(Value::as_u64(&v).unwrap() as u32)),
-            Value::String(s) => Ok(Time::from(s.as_str())),
-            _ => panic!("invalid time format"),
-        }
+        deserializer.deserialize_any(TimeVisitor)
     }
 }

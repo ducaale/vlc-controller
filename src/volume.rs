@@ -1,5 +1,4 @@
 use serde::{self, Deserialize, Deserializer};
-use serde_json::Value;
 use std::fmt;
 
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq, PartialOrd)]
@@ -30,12 +29,6 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<Volume, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let v: Value = Deserialize::deserialize(deserializer)?;
-    match v {
-        Value::Number(_) => {
-            let volume = Volume(Value::as_u64(&v).unwrap() as u32);
-            Ok(volume.scale(512, 200))
-        }
-        _ => panic!("invalid volume"),
-    }
+    let v: u32 = Deserialize::deserialize(deserializer)?;
+    Ok(Volume(v).scale(512, 200))
 }
