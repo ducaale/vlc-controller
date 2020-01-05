@@ -64,7 +64,14 @@ impl<'a> VLCController<'a> {
     }
 
     fn run(&mut self) -> Result<(), reqwest::Error> {
-        let meta = vlc_service::get_meta(&self.client, &self.credentials)?;
+        let meta = match vlc_service::get_meta(&self.client, &self.credentials)? {
+            Some(meta) => meta,
+            None => {
+                self.printer
+                    .print_sticky_line("[info] No File is currently playing");
+                return Ok(());
+            }
+        };
         let status = vlc_service::get_status(&self.client, &self.credentials)?;
         let progress = format!(
             "[info] Currently playing: '{}' ({} / {})",

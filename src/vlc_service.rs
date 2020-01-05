@@ -5,17 +5,16 @@ use crate::{Credentials, Meta, Status, Time, Volume};
 pub fn get_meta(
     client: &reqwest::Client,
     credentials: &Credentials,
-) -> Result<Meta, reqwest::Error> {
+) -> Result<Option<Meta>, reqwest::Error> {
     let mut resp = client
         .get("http://localhost:8080/requests/playlist.json")
         .basic_auth(credentials.user, Some(credentials.password))
         .send()?;
 
-    let data: Value = serde_json::from_str(&resp.text().unwrap()).unwrap();
+    let data: Value = serde_json::from_str(&resp.text()?).unwrap();
     let data = data["children"][0]["children"].clone();
     let metas: Vec<Meta> = serde_json::from_value(data).unwrap();
-    let meta: Meta = metas.last().unwrap().clone();
-    Ok(meta)
+    Ok(metas.last().cloned())
 }
 
 pub fn get_status(
