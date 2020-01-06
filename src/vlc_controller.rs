@@ -3,22 +3,21 @@ use std::io;
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::{time, vlc_service, volume, Command, Credentials, Error, Meta, Printer, Volume};
+use crate::{time, volume, Command, Credentials, Error, Meta, Printer, VLCService, Volume};
 
-pub struct VLCController<'a> {
-    client: reqwest::Client,
-    credentials: Credentials<'a>,
+pub struct VLCController {
+    vlc_service: VLCService,
     printer: Printer,
+
     last_volume: Option<Volume>,
     last_commands_file_uri: Option<String>,
     last_commands: Vec<Command>,
 }
 
-impl<'a> VLCController<'a> {
-    pub fn new(credentials: Credentials) -> VLCController {
+impl VLCController {
+    pub fn new(credentials: Credentials, base_url: String) -> VLCController {
         VLCController {
-            client: reqwest::Client::new(),
-            credentials,
+            vlc_service: VLCService::new(credentials, base_url),
             printer: Printer::new(),
             last_volume: None,
             last_commands_file_uri: None,
@@ -27,7 +26,7 @@ impl<'a> VLCController<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
-        let meta = match vlc_service::get_meta(&self.client, &self.credentials)? {
+        let meta = match self.vlc_service.get_meta()? {
             Some(meta) => meta,
             None => {
                 self.printer
@@ -35,7 +34,7 @@ impl<'a> VLCController<'a> {
                 return Ok(());
             }
         };
-        let status = vlc_service::get_status(&self.client, &self.credentials)?;
+        let status = self.vlc_service.get_status()?;
         self.printer.print_sticky_line(&format!(
             "[info] Currently playing: '{}' ({} / {})",
             meta.name, status.time, meta.duration
@@ -50,7 +49,7 @@ impl<'a> VLCController<'a> {
                             "[info] skipping {} seconds",
                             time::difference(end, start)
                         ));
-                        vlc_service::seek_to(&self.client, &self.credentials, end)?;
+                        self.vlc_service.seek_to(end)?;
                     }
                 }
                 Command::Mute { start, end } => {
@@ -59,12 +58,12 @@ impl<'a> VLCController<'a> {
                             "[info] muting audio for {} seconds",
                             time::difference(end, start)
                         ));
-                        vlc_service::set_volume(&self.client, &self.credentials, Volume::new(0))?;
+                        self.vlc_service.set_volume(Volume::new(0))?;
                         self.last_volume = Some(status.volume);
                     } else if status.time == end {
                         if let Some(last_volume) = self.last_volume {
                             self.printer.print_line("[info] unmuting audio");
-                            vlc_service::set_volume(&self.client, &self.credentials, last_volume)?;
+                            self.vlc_service.set_volume(last_volume)?;
                             self.last_volume = None;
                         }
                     }
@@ -75,7 +74,7 @@ impl<'a> VLCController<'a> {
                             "[info] changing volume from {}% to {}%",
                             status.volume, amount
                         ));
-                        vlc_service::set_volume(&self.client, &self.credentials, amount)?;
+                        self.vlc_service.set_volume(amount)?;
                     }
                 }
             }
