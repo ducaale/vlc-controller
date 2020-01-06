@@ -1,9 +1,8 @@
 # vlc-controller
 This is a VLC controller. It reads commands from a yaml file that has the
 same name as the currently playing video file and is stored in the same directory.
-
-Communication happens through vlc http interface. To enable it, you can refer to this
-[guide](https://wiki.videolan.org/Documentation:Modules/http_intf/).
+Communication happens through vlc http interface which you need to
+[enable](https://wiki.videolan.org/Documentation:Modules/http_intf/).
 
 3 commands are currently supported which are ``skip``, ``mute`` and ``set_volume``.
 
@@ -22,7 +21,7 @@ Communication happens through vlc http interface. To enable it, you can refer to
 - action: set_volume
   # note that percent sign should be used for 0-200 scale
   # otherwise it will be in the scale 0-512
-  amount: 20%
+  amount: '20%'
   at: '10:00'
 
 ```
