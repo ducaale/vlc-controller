@@ -2,8 +2,8 @@
 This is a VLC controller. It reads commands from a yaml file that has the
 same name as the currently playing video file and is stored in the same directory.
 
-Communication happens through vlc http interface. To enable it, you can use this
-[Guide](https://wiki.videolan.org/Documentation:Modules/http_intf/).
+Communication happens through vlc http interface. To enable it, you can refer to this
+[guide](https://wiki.videolan.org/Documentation:Modules/http_intf/).
 Password is not currently configurable so you will need to set it to 12345.
 
 3 commands are currently supported which are ``skip``, ``mute`` and ``set_volume``.
