@@ -30,7 +30,7 @@ Password is not currently configurable so you will need to set it to 12345.
 You will need rust 1.39 or later. To compile run ``cargo build --release``.
 
 ## Todos
-- [ ] implement root Error Enum and replace most ``wrap()``s with proper error handling.
-- [ ] validate commands file and let the user know what is wrong without crashing.
+- [x] implement root Error Enum and replace most ``wrap()``s with proper error handling.
+- [x] validate commands file and let the user know what is wrong without crashing.
 - [ ] pass http interface password as a parameter.
 - [ ] pass ipaddress and port as a parameter.

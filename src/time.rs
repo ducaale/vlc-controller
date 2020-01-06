@@ -54,7 +54,7 @@ impl<'de> Visitor<'de> for TimeVisitor {
         let re = Regex::new(r"^(\d+:){0,2}\d+$").unwrap();
         if !re.is_match(value) {
             return Err(E::custom(format!(
-                "invalid time format: {}, expected time to be in the format [h:][m:]s",
+                "invalid time format '{}', expected time to be in the format [h:][m:]s",
                 value
             )));
         }
