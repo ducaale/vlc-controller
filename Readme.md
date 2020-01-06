@@ -4,7 +4,6 @@ same name as the currently playing video file and is stored in the same director
 
 Communication happens through vlc http interface. To enable it, you can refer to this
 [guide](https://wiki.videolan.org/Documentation:Modules/http_intf/).
-Password is not currently configurable so you will need to set it to 12345.
 
 3 commands are currently supported which are ``skip``, ``mute`` and ``set_volume``.
 
@@ -29,7 +28,7 @@ Password is not currently configurable so you will need to set it to 12345.
 ```
 
 ## Installing
-If you are a windows user, then you can download it from [releases page](https://github.com/ducaale/vlc-controller/releases),
+If you are a windows user, then you can download the binary from [releases page](https://github.com/ducaale/vlc-controller/releases),
 otherwise you need to build it from source.
 
 ## Building from source
