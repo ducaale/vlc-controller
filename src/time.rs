@@ -37,7 +37,7 @@ struct TimeVisitor;
 impl<'de> Visitor<'de> for TimeVisitor {
     type Value = Time;
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("time in the format of [h:][m:]s or an integer of seconds")
+        formatter.write_str("time in the format of [<int>:][<int>:]<int>")
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
@@ -54,7 +54,7 @@ impl<'de> Visitor<'de> for TimeVisitor {
         let re = Regex::new(r"^(\d+:){0,2}\d+$").unwrap();
         if !re.is_match(value) {
             return Err(E::custom(format!(
-                "invalid time format '{}', expected time to be in the format [h:][m:]s",
+                "invalid time format '{}', expected time to be in the format [<int>:][<int>:]<int>",
                 value
             )));
         }
