@@ -50,3 +50,5 @@ OPTIONS:
         --http-port <http-port>    vlc http intf port [default: 8080]
     -p, --password <password>      vlc http intf password
 ```
+## Screenshots
+![screenshot](https://raw.githubusercontent.com/ducaale/vlc-controller/master/screenshots/screenshot-1.png)
