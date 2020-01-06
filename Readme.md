@@ -29,8 +29,8 @@ Password is not currently configurable so you will need to set it to 12345.
 ```
 
 ## Installing
-If you are a windows user, then you can download it from releases page, otherwise
-you need to build it from source.
+If you are a windows user, then you can download it from [releases page](https://github.com/ducaale/vlc-controller/releases),
+otherwise you need to build it from source.
 
 ## Building from source
 You will need rust 1.39 or later. To compile run ``cargo build --release``.
