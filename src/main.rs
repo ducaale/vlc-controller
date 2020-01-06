@@ -18,7 +18,6 @@ use error::Error;
 #[derive(Deserialize, Debug)]
 pub struct Status {
     time: Time,
-    #[serde(with = "volume")]
     volume: Volume,
 }
 

@@ -21,7 +21,9 @@ Password is not currently configurable so you will need to set it to 12345.
   end: '07:32'
   
 - action: set_volume
-  amount: 20
+  # note that percent sign should be used for 0-200 scale
+  # otherwise it will be in the scale 0-512
+  amount: 20%
   at: '10:00'
 
 ```
