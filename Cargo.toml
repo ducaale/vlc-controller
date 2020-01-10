@@ -1,6 +1,6 @@
 [package]
 name = "vlc-controller"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["ducaale <sharaf.13@hotmail.com>"]
 edition = "2018"
 

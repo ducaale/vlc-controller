@@ -35,7 +35,7 @@ You will need rust 1.39 or later. To compile run ``cargo build --release``.
 
 ## Usage
 ```
-vlc-controller 0.1.1
+vlc-controller 0.1.2
 ducaale <sharaf.13@hotmail.com>
 
 USAGE:
