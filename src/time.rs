@@ -6,6 +6,12 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Time(u32);
 
+impl Time {
+    pub fn as_seconds(&self) -> u32 {
+        self.0
+    }
+}
+
 impl fmt::Display for Time {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.0 >= (60 * 60) {

@@ -45,7 +45,10 @@ impl VLCService {
     pub fn seek_to(&self, position: Time) -> Result<(), Error> {
         self.client
             .get(&format!("{}/requests/status.json", self.base_url))
-            .query(&[("command", "seek"), ("val", &position.to_string())])
+            .query(&[
+                ("command", "seek"),
+                ("val", &position.as_seconds().to_string()),
+            ])
             .basic_auth(&self.credentials.user, Some(&self.credentials.password))
             .send()?;
 
